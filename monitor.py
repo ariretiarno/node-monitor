@@ -32,7 +32,7 @@ class LeaderElection:
     def try_acquire_or_renew(self) -> bool:
         """Try to acquire or renew the leadership lease."""
         try:
-            now = datetime.utcnow()
+            now = datetime.now().astimezone()
             
             try:
                 lease = self.coordination_v1.read_namespaced_lease(

@@ -27,7 +27,7 @@ spec:
               topologyKey: kubernetes.io/hostname
       containers:
       - name: monitor
-        image: 107126629234.dkr.ecr.ap-southeast-1.amazonaws.com/testari:nodemon
+        image: 107126629234.dkr.ecr.ap-southeast-1.amazonaws.com/testari:nodemon-election
         imagePullPolicy: Always
         env:
         - name: GOOGLE_CHAT_WEBHOOK_URL
