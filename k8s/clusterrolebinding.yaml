@@ -9,4 +9,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: node-monitor
-  namespace: node-monitor
+  namespace: test-ari-2

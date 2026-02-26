@@ -2,11 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: node-monitor
-  namespace: node-monitor
+  namespace: test-ari-2
   labels:
     app: node-monitor
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: node-monitor
@@ -16,9 +16,18 @@ spec:
         app: node-monitor
     spec:
       serviceAccountName: node-monitor
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: node-monitor
+              topologyKey: kubernetes.io/hostname
       containers:
       - name: monitor
-        image: your-registry/node-monitor:latest
+        image: 107126629234.dkr.ecr.ap-southeast-1.amazonaws.com/testari:nodemon
         imagePullPolicy: Always
         env:
         - name: GOOGLE_CHAT_WEBHOOK_URL
@@ -36,6 +45,16 @@ spec:
             configMapKeyRef:
               name: node-monitor-config
               key: CHECK_INTERVAL_SECONDS
+        - name: ENABLE_LEADER_ELECTION
+          value: "true"
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         resources:
           requests:
             memory: "64Mi"

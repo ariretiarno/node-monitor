@@ -5,15 +5,19 @@ A continuous monitoring solution that tracks Kubernetes node health and sends al
 ## Features
 
 - **Continuous Monitoring**: Long-running deployment that constantly monitors node status
+- **High Availability**: 3 replicas with leader election - only one sends alerts, others standby
 - **Configurable Threshold**: Set custom duration (N minutes) before alerting
 - **Google Chat Integration**: Sends formatted alerts to Google Chat webhook
 - **State Tracking**: Tracks node status over time and only alerts once per incident
 - **Auto-Recovery Detection**: Automatically clears alerts when nodes become ready again
+- **Leader Election**: Automatic failover if the active monitor pod fails
 - **RBAC Compliant**: Minimal permissions (read-only access to nodes)
 
 ## Architecture
 
-- **Deployment**: Single replica pod running continuously
+- **Deployment**: 3 replicas with leader election for high availability
+- **Leader Election**: Uses Kubernetes Lease API to elect a single active monitor
+- **Pod Anti-Affinity**: Spreads replicas across different nodes
 - **ServiceAccount**: Dedicated service account with minimal RBAC permissions
 - **ConfigMap**: Configurable threshold and check interval
 - **Secret**: Secure storage for Google Chat webhook URL
@@ -111,14 +115,61 @@ kubectl apply -f k8s/
 ### 7. Verify Deployment
 
 ```bash
-# Check pod status
+# Check pod status (should see 3 replicas)
 kubectl get pods -n node-monitor
 
-# View logs
+# View logs from all pods
 kubectl logs -n node-monitor -l app=node-monitor -f
+
+# Check which pod is the leader
+kubectl logs -n node-monitor -l app=node-monitor --tail=20 | grep -E "LEADER|FOLLOWER"
+
+# Check the lease
+kubectl get lease -n node-monitor node-monitor-lease -o yaml
 
 # Check if monitor is running
 kubectl get deployment -n node-monitor
+```
+
+You should see output like:
+```
+🎯 I am the LEADER. Starting monitoring.
+⏸️  I am a FOLLOWER. Waiting for leadership.
+⏸️  I am a FOLLOWER. Waiting for leadership.
+```
+
+## High Availability & Leader Election
+
+### How It Works
+
+1. **3 Replicas**: The deployment runs 3 pods across different nodes (via pod anti-affinity)
+2. **Leader Election**: Pods use Kubernetes Lease API to elect one leader
+3. **Active Monitoring**: Only the leader performs checks and sends alerts
+4. **Automatic Failover**: If the leader pod fails, another pod takes over within ~15 seconds
+5. **No Duplicate Alerts**: Only one pod sends alerts at any time
+
+### Leader Election Behavior
+
+- **Lease Duration**: 15 seconds
+- **Renewal**: Leader renews lease every check interval
+- **Takeover**: If leader doesn't renew, another pod acquires the lease
+- **Identity**: Each pod uses its pod name as identity
+
+### Verifying Leader Election
+
+```bash
+# Watch leader changes in real-time
+kubectl logs -n node-monitor -l app=node-monitor -f | grep -E "LEADER|FOLLOWER|leadership"
+
+# Check current lease holder
+kubectl get lease -n node-monitor node-monitor-lease -o jsonpath='{.spec.holderIdentity}'
+
+# Test failover by deleting the leader pod
+LEADER=$(kubectl get lease -n node-monitor node-monitor-lease -o jsonpath='{.spec.holderIdentity}')
+kubectl delete pod -n node-monitor $LEADER
+
+# Watch another pod take over leadership
+kubectl logs -n node-monitor -l app=node-monitor -f
 ```
 
 ## Configuration
@@ -130,6 +181,9 @@ kubectl get deployment -n node-monitor
 | `GOOGLE_CHAT_WEBHOOK_URL` | Google Chat webhook URL | Required | Secret |
 | `THRESHOLD_MINUTES` | Minutes before alerting | 5 | ConfigMap |
 | `CHECK_INTERVAL_SECONDS` | Seconds between checks | 60 | ConfigMap |
+| `ENABLE_LEADER_ELECTION` | Enable leader election | true | Deployment |
+| `NAMESPACE` | Namespace for lease | Auto | Deployment |
+| `POD_NAME` | Pod name for identity | Auto | Deployment |
 
 ### Adjusting Configuration
 
