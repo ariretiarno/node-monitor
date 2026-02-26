@@ -53,7 +53,9 @@ class LeaderElection:
                 
                 lease_time = lease.spec.renew_time or lease.spec.acquire_time
                 if lease_time:
-                    elapsed = (now - lease_time.replace(tzinfo=None)).total_seconds()
+                    if lease_time.tzinfo is None:
+                        lease_time = lease_time.replace(tzinfo=now.tzinfo)
+                    elapsed = (now - lease_time).total_seconds()
                     if elapsed > self.lease_duration:
                         lease.spec.holder_identity = self.identity
                         lease.spec.acquire_time = now
