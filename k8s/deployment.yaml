@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-monitor
+  namespace: node-monitor
+  labels:
+    app: node-monitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-monitor
+  template:
+    metadata:
+      labels:
+        app: node-monitor
+    spec:
+      serviceAccountName: node-monitor
+      containers:
+      - name: monitor
+        image: your-registry/node-monitor:latest
+        imagePullPolicy: Always
+        env:
+        - name: GOOGLE_CHAT_WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: node-monitor-secret
+              key: GOOGLE_CHAT_WEBHOOK_URL
+        - name: THRESHOLD_MINUTES
+          valueFrom:
+            configMapKeyRef:
+              name: node-monitor-config
+              key: THRESHOLD_MINUTES
+        - name: CHECK_INTERVAL_SECONDS
+          valueFrom:
+            configMapKeyRef:
+              name: node-monitor-config
+              key: CHECK_INTERVAL_SECONDS
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65534
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      restartPolicy: Always

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-monitor-config
+  namespace: node-monitor
+data:
+  THRESHOLD_MINUTES: "5"
+  CHECK_INTERVAL_SECONDS: "60"
