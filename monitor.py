@@ -111,7 +111,8 @@ class NodeMonitor:
         check_interval_seconds: int = 60,
         enable_leader_election: bool = False,
         namespace: str = "default",
-        pod_name: str = None
+        pod_name: str = None,
+        cluster_name: str = None
     ):
         self.webhook_url = webhook_url
         self.threshold_minutes = threshold_minutes
@@ -119,6 +120,7 @@ class NodeMonitor:
         self.node_not_ready_since: Dict[str, datetime] = {}
         self.alerted_nodes: Dict[str, bool] = {}
         self.enable_leader_election = enable_leader_election
+        self.cluster_name = cluster_name or "Unknown Cluster"
         
         try:
             config.load_incluster_config()
@@ -160,6 +162,7 @@ class NodeMonitor:
         """Send alert to Google Chat webhook."""
         message = {
             "text": f"🚨 *Node Alert*\n\n"
+                   f"*Cluster:* `{self.cluster_name}`\n"
                    f"*Node:* `{node_name}`\n"
                    f"*Status:* Not Ready\n"
                    f"*Duration:* {duration_minutes:.1f} minutes\n"
@@ -284,6 +287,7 @@ def main():
     enable_leader_election = os.getenv("ENABLE_LEADER_ELECTION", "false").lower() == "true"
     namespace = os.getenv("NAMESPACE", "default")
     pod_name = os.getenv("POD_NAME")
+    cluster_name = os.getenv("CLUSTER_NAME", "Unknown Cluster")
     
     monitor = NodeMonitor(
         webhook_url=webhook_url,
@@ -291,7 +295,8 @@ def main():
         check_interval_seconds=check_interval_seconds,
         enable_leader_election=enable_leader_election,
         namespace=namespace,
-        pod_name=pod_name
+        pod_name=pod_name,
+        cluster_name=cluster_name
     )
     
     monitor.run()

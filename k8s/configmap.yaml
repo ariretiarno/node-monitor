@@ -6,3 +6,4 @@ metadata:
 data:
   THRESHOLD_MINUTES: "2"
   CHECK_INTERVAL_SECONDS: "10"
+  CLUSTER_NAME: "production-eks-cluster"

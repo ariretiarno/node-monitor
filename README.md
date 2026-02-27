@@ -181,6 +181,7 @@ kubectl logs -n node-monitor -l app=node-monitor -f
 | `GOOGLE_CHAT_WEBHOOK_URL` | Google Chat webhook URL | Required | Secret |
 | `THRESHOLD_MINUTES` | Minutes before alerting | 5 | ConfigMap |
 | `CHECK_INTERVAL_SECONDS` | Seconds between checks | 60 | ConfigMap |
+| `CLUSTER_NAME` | Cluster name for alerts | Unknown Cluster | ConfigMap |
 | `ENABLE_LEADER_ELECTION` | Enable leader election | true | Deployment |
 | `NAMESPACE` | Namespace for lease | Auto | Deployment |
 | `POD_NAME` | Pod name for identity | Auto | Deployment |
@@ -190,11 +191,18 @@ kubectl logs -n node-monitor -l app=node-monitor -f
 To change configuration without redeploying:
 
 ```bash
-# Edit ConfigMap
+# Edit ConfigMap (including cluster name)
 kubectl edit configmap node-monitor-config -n node-monitor
 
 # Restart deployment to pick up changes
 kubectl rollout restart deployment/node-monitor -n node-monitor
+```
+
+**Important**: Update the `CLUSTER_NAME` in `k8s/configmap.yaml` to identify your cluster:
+
+```yaml
+data:
+  CLUSTER_NAME: "production-eks-cluster"  # Change this to your cluster name
 ```
 
 ## Alert Format
@@ -204,6 +212,7 @@ When a node is not ready for N minutes, you'll receive a Google Chat message lik
 ```
 🚨 Node Alert
 
+Cluster: `production-eks-cluster`
 Node: `worker-node-1`
 Status: Not Ready
 Duration: 5.2 minutes
